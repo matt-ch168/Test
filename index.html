@@ -1,538 +1,309 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>波羅的海+赫爾辛基 12天行程地圖</title>
-
-<!-- Leaflet CSS -->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>波羅的海 + 赫爾辛基 14 天行程地圖</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
 <style>
-  html, body {
-    margin:0; padding:0; height:100%;
-    font-family: Arial, sans-serif;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  /* 地圖全螢幕 */
-  #map {
-    position: fixed;
-    top:0; bottom:0; left:0; right:0;
-    z-index: 1;
-  }
-
-  /* 側邊欄 */
-  #sidebar {
-    position: fixed;
-    top: 0; bottom: 0; left: 0;
-    width: 300px;
-    max-width: 86vw;
-    background: #fff;
-    overflow-y: auto;
-    box-shadow: 2px 0 6px rgba(0,0,0,0.25);
-    padding: 12px 14px;
-    z-index: 1100;
-    transform: translateX(-340px);
-    transition: transform 0.28s ease;
-  }
-  #sidebar.visible { transform: translateX(0); }
-
-  #toggleSidebarBtn {
-    position: fixed;
-    top: 12px; left: 12px;
-    z-index: 1200;
-    background: #0078d7;
-    color: #fff;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 6px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    font-weight: 700;
-  }
-  #toggleSidebarBtn:active { transform: translateY(1px); }
-
-  ul.tree, ul.tree ul { list-style: none; padding-left: 0.6em; margin:0; }
-  ul.tree { margin-top: 6px; }
-  ul.tree li { margin: 6px 0; }
-
-  button.toggle {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-weight: 700;
-    color: #0b66c2;
-    text-align: left;
-    padding: 6px 6px;
-    width: 100%;
-    font-size: 1rem;
-  }
-  button.toggle[aria-expanded="true"] { color: #004a8f; }
-
-  li.place > button.place-name {
-    background: none;
-    border: none;
-    text-align: left;
-    padding: 4px 8px;
-    width: 100%;
-    cursor: pointer;
-    color: #222;
-    font-weight: 600;
-  }
-  .desc { font-size: 0.85em; color: #666; margin-left: 8px; margin-top: 2px; }
-
-  /* mobile */
-  @media (max-width: 640px) {
-    #sidebar { width: 86vw; transform: translateX(-120%); }
-    #sidebar.visible { transform: translateX(0); }
-  }
+  html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;}
+  #map{position:fixed;top:0;bottom:0;left:0;right:0;z-index:1;}
+  #sidebar{position:fixed;top:0;bottom:0;left:0;width:320px;max-width:86vw;background:#fff;overflow-y:auto;box-shadow:2px 0 6px rgba(0,0,0,.2);padding:12px 14px;z-index:1200;transform:translateX(-360px);transition:transform .25s ease;}
+  #sidebar.visible{transform:translateX(0);}
+  #toggleSidebarBtn{position:fixed;top:12px;left:12px;z-index:1300;background:#0078d7;color:#fff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;}
+  ul.tree, ul.tree ul{list-style:none;padding-left:.6em;margin:0;}
+  ul.tree li{margin:6px 0;}
+  button.toggle{background:none;border:none;cursor:pointer;font-weight:700;color:#0b66c2;text-align:left;padding:6px 6px;width:100%;font-size:1rem;}
+  button.toggle[aria-expanded="true"]{color:#004a8f;}
+  li.place>button.place-name{background:none;border:none;text-align:left;padding:4px 8px;width:100%;cursor:pointer;color:#222;font-weight:600;}
+  .desc{font-size:.86em;color:#666;margin-left:8px;margin-top:2px;}
+  .legend{position:fixed;right:12px;top:12px;background:rgba(255,255,255,0.95);padding:8px;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.15);z-index:1300;font-size:14px;}
+  .legend-item{display:flex;align-items:center;margin:6px 0;}
+  .swatch{width:14px;height:14px;border-radius:50%;display:inline-block;margin-right:8px;}
 </style>
 </head>
 <body>
-
 <button id="toggleSidebarBtn" aria-label="切換行程側邊欄">行程</button>
 <nav id="sidebar" aria-label="行程目錄"></nav>
 <div id="map"></div>
+<div class="legend" aria-hidden="false">
+  <div style="font-weight:700;margin-bottom:6px">圖標說明</div>
+  <div class="legend-item"><span class="swatch" style="background:#1f78b4"></span>教堂</div>
+  <div class="legend-item"><span class="swatch" style="background:#33a02c"></span>博物館 / 美術館</div>
+  <div class="legend-item"><span class="swatch" style="background:#e31a1c"></span>其他景點</div>
+</div>
 
-<!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-/* ======================
-   ===== 行程資料 ======
-   使用你提供的含經緯度完整資料
-   ====================== */
+/* 14 天行程資料（純中文名稱 + 經緯度 + desc_cn 使用你聊天中的中文簡介） */
 const itinerary = [
   {
-    city: "維爾紐斯 ",
+    city: "維爾紐斯",
     days: [
       {
         day: "Day 1",
-        title: "維爾紐斯市區 Day 1",
+        title: "抵達 — 維爾紐斯（中午抵達）",
         places: [
-          {name_cn:"黎明之門",lat:54.6872,lon:25.2887,desc_cn:"維爾紐斯著名古城門"},
-          {name_cn:"聖泰瑞莎教堂",lat:54.6865,lon:25.2880,desc_cn:"巴洛克風格教堂"},
-          {name_cn:"聖三一教堂",lat:54.6860,lon:25.2870,desc_cn:"重要的宗教建築"},
-          {name_cn:"立陶宛國家愛樂協會",lat:54.6880,lon:25.2810,desc_cn:"音樂表演場地"},
-          {name_cn:"維爾紐斯市政廳",lat:54.6875,lon:25.2830,desc_cn:"城市行政中心"}
+          { name_cn:"皮利斯街", lat:54.6882, lon:25.2800, desc_cn:"交通：中午抵達，入住後在老城散步。餐廳推薦：Ertlio Namas、Amandus。老城最熱鬧的街道，滿是餐廳與紀念品店。" },
+          { name_cn:"維爾紐斯主教座堂", lat:54.6883, lon:25.2832, desc_cn:"城市主要天主教堂，位於廣場中心" },
+          { name_cn:"主教座堂鐘塔", lat:54.6880, lon:25.2830, desc_cn:"可登塔遠眺市區景色" }
         ]
       },
       {
         day: "Day 2",
-        title: "維爾紐斯市區 Day 2",
+        title: "維爾紐斯深度（老城+大學區）",
         places: [
-          {name_cn:"皮利斯街",lat:54.6882,lon:25.2800,desc_cn:"熱鬧街道與商店"},
-          {name_cn:"簽署之屋",lat:54.6878,lon:25.2795,desc_cn:"立陶宛獨立宣言簽署地"},
-          {name_cn:"文學街",lat:54.6870,lon:25.2820,desc_cn:"特色壁畫街"},
-          {name_cn:"琥珀博物館",lat:54.6870,lon:25.2800,desc_cn:"展示琥珀寶石"},
-          {name_cn:"立陶宛總統府",lat:54.6873,lon:25.2795,desc_cn:"總統辦公地點"},
-          {name_cn:"維爾紐斯大學",lat:54.6852,lon:25.2801,desc_cn:"歷史悠久的大學"}
+          { name_cn:"維爾紐斯大學", lat:54.6852, lon:25.2801, desc_cn:"東歐最古老的大學之一，以庭院和塔樓著名" },
+          { name_cn:"文學街", lat:54.6870, lon:25.2820, desc_cn:"牆面鑲嵌作家銘牌的文化街道" },
+          { name_cn:"琥珀博物館", lat:54.6870, lon:25.2800, desc_cn:"展示波羅的海琥珀及飾品" },
+          { name_cn:"格迪米納斯塔", lat:54.6882, lon:25.2840, desc_cn:"舊城堡遺跡，可俯瞰整座城市" }
         ]
       },
       {
         day: "Day 3",
-        title: "維爾紐斯 + 特拉凱一日遊",
+        title: "特拉凱一日遊（從維爾紐斯出發）",
         places: [
-          {name_cn:"維爾紐斯主教座堂",lat:54.6883,lon:25.2832,desc_cn:"哥德式教堂"},
-          {name_cn:"主教座堂鐘塔",lat:54.6880,lon:25.2830,desc_cn:"著名鐘塔"},
-          {name_cn:"奇蹟地磚",lat:54.6885,lon:25.2837,desc_cn:"傳說帶來好運的地磚"},
-          {name_cn:"格迪米納斯塔",lat:54.6882,lon:25.2840,desc_cn:"維爾紐斯地標"},
-          {name_cn:"聖安妮教堂",lat:54.6886,lon:25.2835,desc_cn:"哥德式教堂"},
-          {name_cn:"聖母主教座堂",lat:54.6885,lon:25.2835,desc_cn:"重要教堂"},
-          {name_cn:"對岸共和國",lat:54.6870,lon:25.2940,desc_cn:"藝術家共和國"},
-          {name_cn:"【城市移動】前往特拉凱（約30-40分鐘）",lat:54.6880,lon:25.2830,desc_cn:""}
+          { name_cn:"特拉凱城堡", lat:54.6445, lon:24.9345, desc_cn:"湖中城堡是立陶宛最著名景點" },
+          { name_cn:"特拉凱", lat:54.6440, lon:24.9360, desc_cn:"湖泊與城堡周邊的漫步與小吃" }
         ]
       }
     ]
   },
+
   {
-    city: "特拉凱 ",
-    days: [
-      {
-        day: "Day 3",
-        title: "特拉凱一日遊",
-        places: [
-          {name_cn:"特拉凱城堡",lat:54.6445,lon:24.9345,desc_cn:"湖中城堡"},
-          {name_cn:"特拉凱湖",lat:54.6440,lon:24.9360,desc_cn:"城堡湖泊"},
-          {name_cn:"特拉凱歷史博物館",lat:54.6445,lon:24.9350,desc_cn:"介紹特拉凱歷史"}
-        ]
-      }
-    ]
-  },
-  {
-    city: "里加 ",
+    city: "里加",
     days: [
       {
         day: "Day 4",
-        title: "里加市區 Day 1",
+        title: "維爾紐斯 → 里加（陸路）",
         places: [
-          {name_cn:"【城市移動】維爾紐斯→里加 約4-5小時",lat:56.95,lon:24.1,desc_cn:""},
-          {name_cn:"自由紀念碑",lat:56.9519,lon:24.1136,desc_cn:"拉脫維亞獨立象徵"},
-          {name_cn:"萊瑪時鐘",lat:56.9502,lon:24.1125,desc_cn:"著名地標時鐘"},
-          {name_cn:"拉脫維亞國家歌劇院",lat:56.9501,lon:24.1120,desc_cn:"歌劇院"},
-          {name_cn:"聖彼得教堂",lat:56.9508,lon:24.1098,desc_cn:"古老教堂"},
-          {name_cn:"市政廳廣場",lat:56.9514,lon:24.1110,desc_cn:"市中心廣場"},
-          {name_cn:"黑頭宮",lat:56.9512,lon:24.1105,desc_cn:"中世紀建築"},
-          {name_cn:"羅蘭雕像",lat:56.9513,lon:24.1113,desc_cn:"象徵司法與權力"},
-          {name_cn:"槍手廣場",lat:56.9515,lon:24.1090,desc_cn:"歷史地點"}
+          { name_cn:"自由紀念碑", lat:56.9519, lon:24.1136, desc_cn:"交通：巴士約4-5小時。象徵拉脫維亞獨立的地標，周邊可逛中央市場與舊城外圍。" }
         ]
       },
       {
         day: "Day 5",
-        title: "里加市區 Day 2",
+        title: "里加舊城深度走讀",
         places: [
-          {name_cn:"圓頂廣場",lat:56.9517,lon:24.1095,desc_cn:"歷史廣場"},
-          {name_cn:"里加主教座堂",lat:56.9519,lon:24.1087,desc_cn:"大型教堂"},
-          {name_cn:"里加城堡",lat:56.9515,lon:24.1102,desc_cn:"城堡建築"},
-          {name_cn:"聖雅各主教座堂",lat:56.9512,lon:24.1090,desc_cn:"重要教堂"},
-          {name_cn:"拉脫維亞國會",lat:56.9518,lon:24.1107,desc_cn:"國會建築"},
-          {name_cn:"里加三兄弟",lat:56.9516,lon:24.1110,desc_cn:"歷史建築群"},
-          {name_cn:"瑞典門",lat:56.9513,lon:24.1095,desc_cn:"古城門"},
-          {name_cn:"里加城牆",lat:56.9510,lon:24.1100,desc_cn:"古城牆遺址"},
-          {name_cn:"雅各布營房",lat:56.9509,lon:24.1098,desc_cn:"歷史建築"},
-          {name_cn:"里加火藥塔",lat:56.9508,lon:24.1097,desc_cn:"古老炮塔"},
-          {name_cn:"里維廣場",lat:56.9505,lon:24.1089,desc_cn:"熱鬧廣場"},
-          {name_cn:"里加貓之屋",lat:56.9507,lon:24.1091,desc_cn:"奇特建築"},
-          {name_cn:"大小基爾特之屋",lat:56.9511,lon:24.1100,desc_cn:"古老公會建築"},
-          {name_cn:"聖誕主教座堂",lat:56.9514,lon:24.1115,desc_cn:"教堂建築"},
-          {name_cn:"新藝術建築群",lat:56.9520,lon:24.1120,desc_cn:"著名建築群"}
+          { name_cn:"聖彼得教堂", lat:56.9508, lon:24.1098, desc_cn:"高聳的哥德式教堂，可登塔觀景" },
+          { name_cn:"市政廳廣場", lat:56.9514, lon:24.1110, desc_cn:"里加舊城中心，周邊歷史建築密集" },
+          { name_cn:"黑頭宮", lat:56.9512, lon:24.1105, desc_cn:"中世紀商人兄弟會會館，哥德式建築" }
+        ]
+      },
+      {
+        day: "Day 6",
+        title: "里加文化與市場",
+        places: [
+          { name_cn:"圓頂廣場", lat:56.9517, lon:24.1095, desc_cn:"老城主要廣場，舉辦市集與活動" },
+          { name_cn:"里加主教座堂", lat:56.9519, lon:24.1087, desc_cn:"波羅的海最大中世紀教堂之一" },
+          { name_cn:"中央車站", lat:56.9460, lon:24.1090, desc_cn:"中央市場：當地食品、冷熏魚、黑麥麵包，午餐好選擇" }
         ]
       }
     ]
   },
+
   {
-    city: "塔林 ",
+    city: "塔林",
     days: [
       {
-        day: "Day 6",
-        title: "塔林市區 下城區",
-        places: [
-          {name_cn:"維魯門",lat:59.4366,lon:24.7501,desc_cn:"中世紀城門"},
-          {name_cn:"市政廳",lat:59.4370,lon:24.7454,desc_cn:"歷史建築"},
-          {name_cn:"聖尼古拉教堂",lat:59.4375,lon:24.7465,desc_cn:"博物館與教堂"},
-          {name_cn:"市政廳藥局",lat:59.4371,lon:24.7452,desc_cn:"歷史藥局"},
-          {name_cn:"聖靈教堂",lat:59.4378,lon:24.7468,desc_cn:"教堂"},
-          {name_cn:"大基爾特之屋",lat:59.4373,lon:24.7460,desc_cn:"中世紀會館"},
-          {name_cn:"黑人頭兄弟會",lat:59.4374,lon:24.7459,desc_cn:"歷史建築"},
-          {name_cn:"聖奧拉夫教堂",lat:59.4413,lon:24.7475,desc_cn:"古老教堂"},
-          {name_cn:"三姊妹",lat:59.4367,lon:24.7505,desc_cn:"中世紀住宅"},
-          {name_cn:"大海岸城門",lat:59.4368,lon:24.7498,desc_cn:"古城門"}
-        ]
-      },
-      {
         day: "Day 7",
-        title: "塔林市區 上城區",
+        title: "里加 → 塔林（北上）",
         places: [
-          {name_cn:"自由廣場",lat:59.4362,lon:24.7530,desc_cn:"市中心廣場"},
-          {name_cn:"聖約翰教堂",lat:59.4370,lon:24.7536,desc_cn:"教堂"},
-          {name_cn:"防禦工事博物館",lat:59.4375,lon:24.7540,desc_cn:"博物館"},
-          {name_cn:"座堂山城堡",lat:59.4381,lon:24.7536,desc_cn:"古堡"},
-          {name_cn:"亞歷山大涅夫斯基主教座堂",lat:59.4380,lon:24.7534,desc_cn:"東正教大教堂"},
-          {name_cn:"塔林聖母主教座堂",lat:59.4382,lon:24.7535,desc_cn:"教堂"},
-          {name_cn:"口圖觀景台",lat:59.4385,lon:24.7533,desc_cn:"觀景台"},
-          {name_cn:"帕特苦莉觀景台",lat:59.4384,lon:24.7532,desc_cn:"觀景台"},
-          {name_cn:"telliskivi creative city",lat:59.4367,lon:24.7270,desc_cn:"創意園區"},
-          {name_cn:"戶外博物館",lat:59.4370,lon:24.7210,desc_cn:"露天博物館"},
-          {name_cn:"愛沙尼亞藝術博物館",lat:59.4373,lon:24.7370,desc_cn:"藝術博物館"},
-          {name_cn:"卡利柯治皇宮",lat:59.4361,lon:24.7492,desc_cn:"巴洛克風宮殿"}
+          { name_cn:"維魯門", lat:59.4366, lon:24.7501, desc_cn:"塔林舊城的主要入口，以中世紀城牆聞名" },
+          { name_cn:"市政廳", lat:59.4370, lon:24.7454, desc_cn:"中世紀哥德式建築，是舊城廣場的地標" },
+          { name_cn:"市政廳藥局", lat:59.4371, lon:24.7452, desc_cn:"歐洲最古老的藥局之一，至今仍在營業" }
         ]
       },
       {
         day: "Day 8",
-        title: "塔林市區 自由補充行程",
+        title: "上城 Toompea 與觀景台",
         places: [
-          {name_cn:"Kalamaja 港區",lat:59.4390,lon:24.7400,desc_cn:"文青區"},
-          {name_cn:"海洋博物館",lat:59.4469,lon:24.7253,desc_cn:"海事博物館"}
+          { name_cn:"座堂山城堡", lat:59.4381, lon:24.7536, desc_cn:"愛沙尼亞議會所在地，歷史城堡" },
+          { name_cn:"亞歷山大涅夫斯基主教座堂", lat:59.4380, lon:24.7534, desc_cn:"俄式東正教堂，以洋蔥頭圓頂著名" },
+          { name_cn:"口圖觀景台", lat:59.4385, lon:24.7533, desc_cn:"可俯瞰塔林舊城紅瓦屋頂的最佳地點" }
         ]
-      }
-    ]
-  },
-  {
-    city: "赫爾辛基 ",
-    days: [
+      },
       {
         day: "Day 9",
-        title: "赫爾辛基市區 Day 1",
+        title: "創意區 + 戶外博物館",
         places: [
-          {name_cn:"【城市移動】塔林→赫爾辛基 渡輪約2小時",lat:60.1695,lon:24.9354,desc_cn:""},
-          {name_cn:"赫爾辛基中央車站",lat:60.1719,lon:24.9414,desc_cn:"交通樞紐"},
-          {name_cn:"阿黛濃美術館",lat:60.1691,lon:24.9410,desc_cn:"藝術博物館"},
-          {name_cn:"參議院廣場",lat:60.1690,lon:24.9515,desc_cn:"市中心廣場"},
-          {name_cn:"主教座堂",lat:60.1695,lon:24.9525,desc_cn:"新古典主義教堂"},
-          {name_cn:"烏斯佩斯基大教堂",lat:60.1692,lon:24.9640,desc_cn:"東正教大教堂"}
+          { name_cn:"Telliskivi 創意城區", lat:59.4367, lon:24.7270, desc_cn:"設計小店、咖啡館、街頭藝術" },
+          { name_cn:"戶外博物館", lat:59.4370, lon:24.7210, desc_cn:"展示愛沙尼亞傳統鄉村建築與生活" },
+          { name_cn:"愛沙尼亞藝術博物館", lat:59.4373, lon:24.7370, desc_cn:"愛沙尼亞最大藝術館，藏品豐富" }
         ]
       },
       {
         day: "Day 10",
-        title: "赫爾辛基市區 Day 2",
+        title: "可選：Lahemaa 國家公園 或 帕爾努",
         places: [
-          {name_cn:"集市廣場",lat:60.1689,lon:24.9511,desc_cn:"傳統市集"},
-          {name_cn:"老農貿市場",lat:60.1685,lon:24.9472,desc_cn:"市場"},
-          {name_cn:"埃斯普拉納迪公園",lat:60.1696,lon:24.9458,desc_cn:"城市公園"},
-          {name_cn:"康皮教堂",lat:60.1692,lon:24.9330,desc_cn:"安靜教堂"},
-          {name_cn:"岩石教堂",lat:60.1733,lon:24.9269,desc_cn:"岩石雕刻教堂"}
+          { name_cn:"Lahemaa 國家公園", lat:59.5833, lon:25.7000, desc_cn:"自然與莊園風光，適合半日或一日遊" },
+          { name_cn:"帕爾努", lat:58.3847, lon:24.4971, desc_cn:"愛沙尼亞海濱小鎮，夏季海灘熱鬧" }
         ]
-      },
+      }
+    ]
+  },
+
+  {
+    city: "赫爾辛基",
+    days: [
       {
         day: "Day 11",
-        title: "赫爾辛基市區 Day 3",
+        title: "塔林 → 赫爾辛基（渡輪）",
         places: [
-          {name_cn:"西貝流士紀念碑",lat:60.1845,lon:24.8869,desc_cn:"紀念音樂家"},
-          {name_cn:"芬蘭堡",lat:60.1470,lon:24.9930,desc_cn:"海上堡壘"}
+          { name_cn:"參議院廣場", lat:60.1690, lon:24.9515, desc_cn:"新古典風格廣場，周邊有主要地標。建議早上搭渡輪抵達後直接開始市區走訪" },
+          { name_cn:"中央車站", lat:60.1719, lon:24.9414, desc_cn:"芬蘭重要交通樞紐，建築風格獨特" }
         ]
       },
       {
         day: "Day 12",
-        title: "赫爾辛基市區 自由活動",
+        title: "設計區 + 岩石教堂",
         places: [
-          {name_cn:"自由活動",lat:60.1690,lon:24.9410,desc_cn:"購物、休息或補充景點"}
+          { name_cn:"烏斯佩斯基大教堂", lat:60.1692, lon:24.9640, desc_cn:"東正教堂，紅磚外牆與金色圓頂" },
+          { name_cn:"岩石教堂", lat:60.1733, lon:24.9269, desc_cn:"以天然岩石建造的特殊教堂" },
+          { name_cn:"埃斯普拉納迪公園", lat:60.1696, lon:24.9458, desc_cn:"市中心綠地，適合散步休息" }
+        ]
+      },
+      {
+        day: "Day 13",
+        title: "Porvoo 半日或赫爾辛基自由行",
+        places: [
+          { name_cn:"波爾沃", lat:60.3931, lon:25.6659, desc_cn:"芬蘭最美小鎮之一，適合半日拍照與甜點巡禮" },
+          { name_cn:"阿黛濃美術館", lat:60.1691, lon:24.9410, desc_cn:"芬蘭經典藝術收藏豐富（Ateneum）" }
+        ]
+      },
+      {
+        day: "Day 14",
+        title: "赫爾辛基（上午/下午）→ 離境（傍晚）",
+        places: [
+          { name_cn:"集市廣場", lat:60.1689, lon:24.9511, desc_cn:"臨海市集，販售當地美食與紀念品。離境前最後購物與用餐好去處" }
         ]
       }
     ]
   }
 ];
 
-/* ======================
-   ===== 地圖初始化 =====
-   ====================== */
-const map = L.map("map").setView([59.4370, 24.7536], 6);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19,
-  attribution: '© OpenStreetMap contributors'
-}).addTo(map);
+/* 地圖初始化 */
+const map = L.map('map').setView([59.4370, 24.7536], 6);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(map);
 
 let currentMarker = null;
-function clearMarker(){
-  if(currentMarker){
-    map.removeLayer(currentMarker);
-    currentMarker = null;
-  }
+function clearMarker(){ if(currentMarker){ map.removeLayer(currentMarker); currentMarker = null; } }
+
+/* 根據名稱判斷顏色（教堂=藍, 博物館=綠, 其他=紅） */
+function getPlaceColor(name){
+  if(/教堂|主教座堂|大教堂/.test(name)) return '#1f78b4';
+  if(/博物館|美術館|戶外博物館|藝術博物館/.test(name)) return '#33a02c';
+  return '#e31a1c';
 }
 
-/* ======================
-   ===== 側邊欄建構 =====
-   ====================== */
-const sidebar = document.getElementById("sidebar");
+/* 側邊欄生成（城市→天數→景點） */
+const sidebar = document.getElementById('sidebar');
+
 function createPlaceItem(place, cityName){
-  const li = document.createElement("li");
-  li.className = "place";
-
-  const btn = document.createElement("button");
-  btn.className = "place-name";
-  btn.type = "button";
+  const li = document.createElement('li');
+  li.className = 'place';
+  const btn = document.createElement('button');
+  btn.className = 'place-name';
+  btn.type = 'button';
   btn.textContent = place.name_cn;
-  btn.title = (place.desc_cn || "") + (place.desc_en ? " / " + place.desc_en : "");
-
-  btn.addEventListener("click", () => {
+  btn.title = place.desc_cn || '';
+  btn.addEventListener('click', () => {
     addMarker(place, cityName);
-    // 點後自動關閉側邊欄（行動裝置友善）
-    sidebar.classList.remove("visible");
+    sidebar.classList.remove('visible');
   });
-
   li.appendChild(btn);
-  if(place.desc_cn || place.desc_en){
-    const desc = document.createElement("div");
-    desc.className = "desc";
-    desc.innerHTML = (place.desc_cn || "");
+  if(place.desc_cn){
+    const desc = document.createElement('div');
+    desc.className = 'desc';
+    desc.textContent = place.desc_cn;
     li.appendChild(desc);
   }
   return li;
 }
 
 function createDayItem(day, cityName){
-  const li = document.createElement("li");
-  const btn = document.createElement("button");
-  btn.className = "toggle";
-  btn.type = "button";
+  const li = document.createElement('li');
+  const btn = document.createElement('button');
+  btn.className = 'toggle';
+  btn.type = 'button';
   btn.textContent = `${day.day} - ${day.title}`;
-  btn.setAttribute("aria-expanded", "false");
-
-  const ul = document.createElement("ul");
-  ul.style.display = "none";
-
-  btn.addEventListener("click", () => {
-    const expanded = btn.getAttribute("aria-expanded") === "true";
-    btn.setAttribute("aria-expanded", String(!expanded));
-    ul.style.display = expanded ? "none" : "block";
-    li.classList.toggle("expanded");
+  btn.setAttribute('aria-expanded', 'false');
+  const ul = document.createElement('ul');
+  ul.style.display = 'none';
+  btn.addEventListener('click', () => {
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', String(!expanded));
+    ul.style.display = expanded ? 'none' : 'block';
+    li.classList.toggle('expanded');
   });
-
-  day.places.forEach(place => {
-    ul.appendChild(createPlaceItem(place, cityName));
-  });
-
+  day.places.forEach(place => ul.appendChild(createPlaceItem(place, cityName)));
   li.appendChild(btn);
   li.appendChild(ul);
   return li;
 }
 
-function createCityItem(city, cityIndex){
-  const li = document.createElement("li");
-  const btn = document.createElement("button");
-  btn.className = "toggle";
-  btn.type = "button";
+function createCityItem(city){
+  const li = document.createElement('li');
+  const btn = document.createElement('button');
+  btn.className = 'toggle';
+  btn.type = 'button';
   btn.textContent = city.city;
-  btn.setAttribute("aria-expanded", "false");
-
-  const ul = document.createElement("ul");
-  ul.style.display = "none";
-
-  btn.addEventListener("click", () => {
-    const expanded = btn.getAttribute("aria-expanded") === "true";
-    btn.setAttribute("aria-expanded", String(!expanded));
-    ul.style.display = expanded ? "none" : "block";
-    li.classList.toggle("expanded");
+  btn.setAttribute('aria-expanded', 'false');
+  const ul = document.createElement('ul');
+  ul.style.display = 'none';
+  btn.addEventListener('click', () => {
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', String(!expanded));
+    ul.style.display = expanded ? 'none' : 'block';
+    li.classList.toggle('expanded');
   });
-
-  city.days.forEach(day => {
-    ul.appendChild(createDayItem(day, city.city));
-  });
-
+  city.days.forEach(day => ul.appendChild(createDayItem(day, city.city)));
   li.appendChild(btn);
   li.appendChild(ul);
   return li;
 }
 
 function buildSidebar(){
-  // clear
-  sidebar.innerHTML = "";
-  const ul = document.createElement("ul");
-  ul.className = "tree";
-
-  itinerary.forEach((city, idx) => {
-    ul.appendChild(createCityItem(city, idx));
-  });
-
+  sidebar.innerHTML = '';
+  const ul = document.createElement('ul');
+  ul.className = 'tree';
+  itinerary.forEach(city => ul.appendChild(createCityItem(city)));
   sidebar.appendChild(ul);
 }
 buildSidebar();
 
-/* ======================
-   ===== 點標記函式 =====
-   ====================== */
-function addMarker(place, cityName = ""){
+/* 在地圖上顯示 marker（使用 circleMarker，避免外部圖檔） */
+function addMarker(place, cityName){
   clearMarker();
   if(!place.lat || !place.lon) return;
-
-  currentMarker = L.marker([place.lat, place.lon]).addTo(map);
-
-  // Google Map 搜尋連結（城市 + 中文名）
-  const query = encodeURIComponent((cityName ? cityName + " " : "") + place.name_cn);
-  const googleMapUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
-
-  const popupContent = `
-    <strong>${place.name_cn}</strong><br>
-    <em>${place.desc_cn || ""}</em><br>
-    <a href="${googleMapUrl}" target="_blank" rel="noopener noreferrer">在 Google 地圖中開啟</a>
-  `;
-
+  const color = getPlaceColor(place.name_cn);
+  currentMarker = L.circleMarker([place.lat, place.lon], {
+    radius: 8,
+    color: color,
+    fillColor: color,
+    fillOpacity: 0.9,
+    weight: 1
+  }).addTo(map);
+  const popupContent = `<strong>${place.name_cn}</strong><br><em>${place.desc_cn || ''}</em><br><small>${cityName || ''}</small><br><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name_cn)}" target="_blank" rel="noopener">在 Google 地圖中開啟</a>`;
   currentMarker.bindPopup(popupContent).openPopup();
-  map.setView([place.lat, place.lon], 15);
+  map.setView([place.lat, place.lon], 14);
 }
 
-/* ======================
-   ===== 側邊欄切換 =====
-   ====================== */
-const toggleBtn = document.getElementById("toggleSidebarBtn");
-toggleBtn.addEventListener("click", () => {
-  sidebar.classList.toggle("visible");
+/* 側邊欄按鈕 */
+document.getElementById('toggleSidebarBtn').addEventListener('click', () => {
+  sidebar.classList.toggle('visible');
 });
 
-/* ======================
-   ===== 自動展開當天行程 =====
-   修正版（更健壯）
-   - tripStartDate: 2025-08-05 為 Day 1
-   - 會計算 dayOffset，並找到對應 cityIndex / dayIndex
-   - 若超出範圍則預設回第一天
-   ====================== */
-const tripStartDate = new Date(2025, 7, 1); // 2025-08-01 (month 0-based)
-function dateOnly(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
-
-window.addEventListener("load", () => {
-  try {
-    // 當天日期（本地）
-    const today = dateOnly(new Date());
-    const start = dateOnly(tripStartDate);
-
-    // 計算 offset: 0 => Day 1
-    let dayOffset = Math.floor((today - start) / (1000 * 60 * 60 * 24));
-    if(isNaN(dayOffset) || dayOffset < 0) dayOffset = 0;
-
-    // 計算總天數
-    const totalDays = itinerary.reduce((sum, city) => sum + city.days.length, 0);
-    if(dayOffset >= totalDays) dayOffset = 0; // 超過範圍回到 Day 1
-
-    // 找到 cityIndex 與 dayIndex（在 city 的 day array 內）
-    let remaining = dayOffset;
-    let cityIndex = 0, dayIndex = 0;
-    for(let i=0; i<itinerary.length; i++){
-      const daysCount = itinerary[i].days.length;
-      if(remaining < daysCount){
-        cityIndex = i;
-        dayIndex = remaining;
-        break;
-      } else {
-        remaining -= daysCount;
-      }
-    }
-
-    // 展開對應 city/day 並點選第一個景點（若存在）
-    setTimeout(() => {
-      openCity(cityIndex);
-      openDay(cityIndex, dayIndex);
-      const firstPlaceBtn = getPlaceButton(cityIndex, dayIndex, 0);
-      if(firstPlaceBtn) firstPlaceBtn.click();
-      // 顯示側邊欄（視需要）
-      sidebar.classList.add("visible");
-    }, 250);
-  } catch (e) {
-    console.error("自動展開行程時發生錯誤：", e);
-  }
-});
-
-/* ======================
-   ===== 輔助：打開 city/day 的函式 =====
-   直接操控 DOM 的按鈕避免選取錯誤
-   ====================== */
-function getCityButton(cityIndex){
-  // city buttons are first-level .tree > li > button.toggle
-  const cityButtons = sidebar.querySelectorAll("ul.tree > li > button.toggle");
-  return cityButtons[cityIndex] || null;
-}
-function getDayButton(cityIndex, dayIndex){
-  const cityLi = sidebar.querySelectorAll("ul.tree > li")[cityIndex];
-  if(!cityLi) return null;
-  const dayButtons = cityLi.querySelectorAll("ul > li > button.toggle");
-  return dayButtons[dayIndex] || null;
-}
-function getPlaceButton(cityIndex, dayIndex, placeIndex){
-  const cityLi = sidebar.querySelectorAll("ul.tree > li")[cityIndex];
-  if(!cityLi) return null;
-  const dayLi = cityLi.querySelectorAll("ul > li")[dayIndex];
-  if(!dayLi) return null;
-  const placeBtn = dayLi.querySelectorAll("ul li.place button.place-name")[placeIndex];
-  return placeBtn || null;
-}
-
-function openCity(cityIndex){
-  const btn = getCityButton(cityIndex);
-  if(!btn) return;
-  // if not expanded, click it
-  if(btn.getAttribute("aria-expanded") !== "true"){
-    btn.click();
-  }
-}
-function openDay(cityIndex, dayIndex){
-  openCity(cityIndex);
-  const btn = getDayButton(cityIndex, dayIndex);
-  if(!btn) return;
-  if(btn.getAttribute("aria-expanded") !== "true"){
-    btn.click();
-  }
-}
-
-/* ======================
-   ===== 結束 =====
-   ====================== */
+/* 自動展開並點第一個景點（示範，可刪除） */
+(function openFirst(){
+  try{
+    const firstCityBtn = sidebar.querySelector('ul.tree > li > button.toggle');
+    if(firstCityBtn) firstCityBtn.click();
+    const firstDayBtn = sidebar.querySelector('ul.tree > li ul > li > button.toggle');
+    if(firstDayBtn) firstDayBtn.click();
+    const firstPlaceBtn = sidebar.querySelector('ul.tree > li ul > li ul li.place button.place-name');
+    if(firstPlaceBtn) firstPlaceBtn.click();
+  }catch(e){console.warn(e);}
+})();
 </script>
 </body>
 </html>
